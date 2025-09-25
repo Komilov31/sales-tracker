@@ -75,11 +75,11 @@ func getRecords(items []model.Item, isAggregated bool) [][]string {
 
 		if isAggregated {
 			sum := fmt.Sprintf("%d", item.Aggregated.Sum)
-			avarage := fmt.Sprintf("%.2f", item.Aggregated.Agvarage)
+			average := fmt.Sprintf("%.2f", item.Aggregated.Average)
 			count := fmt.Sprintf("%d", item.Aggregated.Count)
 			median := fmt.Sprintf("%.2f", item.Aggregated.Median)
 			percentile := fmt.Sprintf("%.2f", item.Aggregated.Percentile_90)
-			record = append(record, sum, avarage, count, median, percentile)
+			record = append(record, sum, average, count, median, percentile)
 		}
 
 		records = append(records, record)

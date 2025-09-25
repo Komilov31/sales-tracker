@@ -1,258 +1,292 @@
-// DOM elements
-const imageFileInput = document.getElementById('imageFile');
-const fileText = document.getElementById('fileText');
-const imagePreview = document.getElementById('imagePreview');
-const previewImg = document.getElementById('previewImg');
-const taskSelect = document.getElementById('taskSelect');
-const watermarkGroup = document.getElementById('watermarkGroup');
-const watermarkText = document.getElementById('watermarkText');
-const resizeGroup = document.getElementById('resizeGroup');
-const widthInput = document.getElementById('width');
-const heightInput = document.getElementById('height');
-const contentTypeSelect = document.getElementById('contentType');
-const submitBtn = document.getElementById('submitBtn');
-const resultSection = document.getElementById('resultSection');
-const resultContent = document.getElementById('resultContent');
-const loading = document.getElementById('loading');
+document.addEventListener('DOMContentLoaded', function() {
+    const API_BASE = '/';
 
-// New elements for image management
-const imageIdInput = document.getElementById('imageId');
-const getImageBtn = document.getElementById('getImageBtn');
-const deleteImageBtn = document.getElementById('deleteImageBtn');
-const fetchedImageSection = document.getElementById('fetchedImageSection');
-const fetchedImageContainer = document.getElementById('fetchedImageContainer');
+    // Load items on page load
+    loadItems();
 
-// File upload handling
-imageFileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        fileText.textContent = file.name;
-        submitBtn.disabled = false;
-
-        // Show image preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            imagePreview.style.display = 'block';
+    // Add item form
+    const addForm = document.getElementById('add-form');
+    addForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = {
+            type: document.getElementById('type').value,
+            amount: parseInt(document.getElementById('amount').value),
+            date: document.getElementById('date').value,
+            category: document.getElementById('category').value
         };
-        reader.readAsDataURL(file);
 
-        // Set content type based on file extension
-        const fileName = file.name.toLowerCase();
-        if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
-            contentTypeSelect.value = 'image/jpeg';
-        } else if (fileName.endsWith('.png')) {
-            contentTypeSelect.value = 'image/png';
-        } else if (fileName.endsWith('.gif')) {
-            contentTypeSelect.value = 'image/gif';
+        try {
+            const response = await fetch(API_BASE + 'items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                addForm.reset();
+                loadItems(); // Reload table
+                alert('Запись добавлена!');
+            } else {
+                throw new Error('Ошибка при добавлении');
+            }
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
         }
-    } else {
-        fileText.textContent = 'Файл не выбран';
-        imagePreview.style.display = 'none';
-        submitBtn.disabled = true;
-    }
-});
+    });
 
-// Task selection handling
-taskSelect.addEventListener('change', function(e) {
-    const task = e.target.value;
+    // Apply filters and sorting
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    applyFiltersBtn.addEventListener('click', function() {
+        loadItems();
+    });
 
-    // Hide all task-specific fields
-    watermarkGroup.style.display = 'none';
-    resizeGroup.style.display = 'none';
+    // Analytics form
+    const analyticsForm = document.getElementById('analytics-form');
+    analyticsForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const from = document.getElementById('analytics-from').value;
+        const to = document.getElementById('analytics-to').value;
+        await loadAnalytics(from, to);
+    });
 
-    // Show relevant fields based on task
-    switch(task) {
-        case 'watermark':
-            watermarkGroup.style.display = 'block';
-            break;
-        case 'resize':
-            resizeGroup.style.display = 'block';
-            break;
-        case 'miniature generating':
-            // No additional fields needed for thumbnail generation
-            break;
-    }
-});
+    // Export buttons
+    document.getElementById('export-items-csv').addEventListener('click', exportItemsCSV);
+    document.getElementById('export-analytics-csv').addEventListener('click', exportAnalyticsCSV);
 
-// Form validation
-function validateForm() {
-    const file = imageFileInput.files[0];
-    const task = taskSelect.value;
-    const contentType = contentTypeSelect.value;
+    async function loadItems() {
+        const sortBy = document.getElementById('sort-by').value;
+        const params = new URLSearchParams();
+        if (sortBy) params.append('sort_by', sortBy);
 
-    if (!file || !task || !contentType) {
-        return false;
+        const response = await fetch(API_BASE + 'items?' + params.toString());
+        if (!response.ok) throw new Error('Ошибка загрузки записей');
+
+        const items = await response.json();
+        displayItems(items);
+        applyClientSideFilters(items);
     }
 
-    if (task === 'resize') {
-        const width = widthInput.value;
-        const height = heightInput.value;
-        if (!width || !height || width <= 0 || height <= 0) {
-            return false;
+    function displayItems(items) {
+        const tbody = document.querySelector('#items-table tbody');
+        tbody.innerHTML = '';
+
+        items.forEach(item => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.type}</td>
+                <td>${item.amount}</td>
+                <td>${item.date}</td>
+                <td>${item.category}</td>
+                <td>
+                    <button onclick="editItem(${item.id}, '${item.type}', ${item.amount}, '${item.date}', '${item.category}')">Редактировать</button>
+                    <button onclick="deleteItem(${item.id})">Удалить</button>
+                </td>
+            `;
+        });
+    }
+
+    function applyClientSideFilters(allItems) {
+        const filterType = document.getElementById('filter-type').value;
+        const filterCategory = document.getElementById('filter-category').value.toLowerCase();
+        const filterDateFrom = document.getElementById('filter-date-from').value;
+        const filterDateTo = document.getElementById('filter-date-to').value;
+
+        let filteredItems = allItems;
+
+        if (filterType) {
+            filteredItems = filteredItems.filter(item => item.type === filterType);
         }
+
+        if (filterCategory) {
+            filteredItems = filteredItems.filter(item => item.category.toLowerCase().includes(filterCategory));
+        }
+
+        if (filterDateFrom) {
+            filteredItems = filteredItems.filter(item => item.date >= filterDateFrom);
+        }
+
+        if (filterDateTo) {
+            filteredItems = filteredItems.filter(item => item.date <= filterDateTo);
+        }
+
+        displayItems(filteredItems);
     }
 
-    return true;
-}
+    // Edit item (simple prompt for now, can be improved with modal)
+    window.editItem = async function(id, type, amount, date, category) {
+        const newType = prompt('Новый тип:', type);
+        const newAmount = prompt('Новая сумма:', amount);
+        const newDate = prompt('Новая дата (YYYY-MM-DD):', date);
+        const newCategory = prompt('Новая категория:', category);
 
-// Update submit button state
-function updateSubmitButton() {
-    submitBtn.disabled = !validateForm();
-}
+        if (newType && newAmount && newDate && newCategory) {
+            const updateData = {
+                type: newType,
+                amount: parseInt(newAmount),
+                date: newDate,
+                category: newCategory
+            };
 
-// Add event listeners for form validation
-taskSelect.addEventListener('change', updateSubmitButton);
-contentTypeSelect.addEventListener('change', updateSubmitButton);
-widthInput.addEventListener('input', updateSubmitButton);
-heightInput.addEventListener('input', updateSubmitButton);
+            const response = await fetch(API_BASE + `items/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
 
-// Submit form
-submitBtn.addEventListener('click', async function() {
-    if (!validateForm()) {
-        showResult('Пожалуйста, заполните все обязательные поля', 'error');
-        return;
-    }
-
-    const file = imageFileInput.files[0];
-    const task = taskSelect.value;
-    const contentType = contentTypeSelect.value;
-    const watermark = watermarkText.value;
-
-    // Prepare metadata
-    const metadata = {
-        content_type: contentType,
-        task: task,
-        watermark_string: watermark,
-        resize: {
-            width: parseInt(widthInput.value) || 0,
-            height: parseInt(heightInput.value) || 0
+            if (response.ok) {
+                loadItems();
+                alert('Запись обновлена!');
+            } else {
+                alert('Ошибка обновления');
+            }
         }
     };
 
-    // Create FormData
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('metadata', JSON.stringify(metadata));
+    // Delete item
+    window.deleteItem = async function(id) {
+        if (confirm('Удалить запись?')) {
+            const response = await fetch(API_BASE + `items/${id}`, {
+                method: 'DELETE'
+            });
 
-    // Show loading
-    loading.style.display = 'flex';
-
-    try {
-        const response = await fetch('/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            showResult(`Изображение успешно отправлено на обработку! ID: ${data.id}`, 'success');
-            // Set the ID in the input field for immediate use
-            imageIdInput.value = data.id;
-        } else {
-            const errorData = await response.json();
-            showResult(`Ошибка: ${errorData.error || 'Неизвестная ошибка'}`, 'error');
+            if (response.ok) {
+                loadItems();
+                alert('Запись удалена!');
+            } else {
+                alert('Ошибка удаления');
+            }
         }
-    } catch (error) {
-        showResult(`Ошибка сети: ${error.message}`, 'error');
-    } finally {
-        loading.style.display = 'none';
+    };
+
+    async function loadAnalytics(from, to) {
+        const params = new URLSearchParams();
+        if (from) params.append('from', from);
+        if (to) params.append('to', to);
+
+        const response = await fetch(API_BASE + 'analytics?' + params.toString());
+        if (!response.ok) throw new Error('Ошибка загрузки аналитики');
+
+        const analytics = await response.json();
+        displayAnalytics(analytics);
+        drawChart(analytics);
     }
-});
 
-// Get image by ID
-getImageBtn.addEventListener('click', async function() {
-    const imageId = imageIdInput.value.trim();
+    function displayAnalytics(analytics) {
+        const tbody = document.querySelector('#analytics-table tbody');
+        tbody.innerHTML = '';
 
-    if (!imageId) {
-        showResult('Пожалуйста, введите ID изображения', 'error');
-        return;
-    }
+        if (analytics.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2">Нет данных</td></tr>';
+            return;
+        }
 
-    // Show loading
-    loading.style.display = 'flex';
+        const agg = analytics[0].aggregated_data;
+        const rows = [
+            ['Сумма', agg.sum],
+            ['Среднее', agg.average],
+            ['Количество', agg.count],
+            ['Медиана', agg.median],
+            ['90-й перцентиль', agg.percentile_90],
+        ];
 
-    try {
-        const response = await fetch(`/image/${imageId}`, {
-            method: 'GET'
+        rows.forEach(([label, value]) => {
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>${label}</td><td>${value}</td>`;
         });
+    }
 
+    function drawChart(analytics) {
+        const canvas = document.getElementById('analytics-chart');
+        const ctx = canvas.getContext('2d');
+
+        // Simple bar chart for aggregated values
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (analytics.length === 0) return;
+
+        // Set canvas size to fit 5 bars
+        canvas.width = 400;
+        canvas.height = 200;
+
+        const agg = analytics[0].aggregated_data;
+        // Bars for sum, average (scaled), median (scaled), count (scaled), percentile_90 (scaled)
+        const scaleFactor = 10; // Scale smaller values for visibility
+        const data = [
+            agg.sum,
+            agg.average * scaleFactor,
+            agg.median * scaleFactor,
+            agg.count * scaleFactor,
+            agg.percentile_90 * scaleFactor
+        ];
+        const labels = ['Сумма', 'Среднее', 'Медиана', 'Количество', '90-й перцентиль'];
+        const barWidth = 40;
+        const spacing = 60;
+        const maxHeight = 150;
+        const maxValue = Math.max(...data);
+
+        data.forEach((value, index) => {
+            const height = (value / maxValue) * maxHeight;
+            const x = index * spacing + 20;
+            const y = canvas.height - height - 20;
+
+            ctx.fillStyle = '#007bff';
+            ctx.fillRect(x, y, barWidth, height);
+
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText(labels[index], x, canvas.height - 5);
+            // Display actual values (unscaled where appropriate)
+            let actualValue;
+            if (index === 0) {
+                actualValue = value.toFixed(0);
+            } else if (index === 3) {
+                actualValue = (value / scaleFactor).toFixed(0);
+            } else {
+                actualValue = (value / scaleFactor).toFixed(2);
+            }
+            ctx.fillText(actualValue, x, y - 5);
+        });
+    }
+
+    async function exportItemsCSV() {
+        const sortBy = document.getElementById('sort-by').value;
+        const params = new URLSearchParams();
+        if (sortBy) params.append('sort_by', sortBy);
+
+        const response = await fetch(API_BASE + 'items/csv?' + params.toString());
         if (response.ok) {
-            // Create blob URL for the image
             const blob = await response.blob();
-            const imageUrl = URL.createObjectURL(blob);
-
-            // Display the image
-            fetchedImageContainer.innerHTML = `
-                <img src="${imageUrl}" alt="Fetched Image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);">
-                <div class="fetched-image-info">
-                    <strong>ID:</strong> ${imageId}
-                </div>
-            `;
-            fetchedImageSection.style.display = 'block';
-        } else if (response.status === 200) {
-            const data = await response.json();
-            showResult(`Изображение в обработке: ${data.status}`, 'success');
+            downloadBlob(blob, 'items.csv');
         } else {
-            const errorData = await response.json();
-            showResult(`Ошибка: ${errorData.error || 'Неизвестная ошибка'}`, 'error');
+            alert('Ошибка экспорта');
         }
-    } catch (error) {
-        showResult(`Ошибка сети: ${error.message}`, 'error');
-    } finally {
-        loading.style.display = 'none';
-    }
-});
-
-// Delete image by ID
-deleteImageBtn.addEventListener('click', async function() {
-    const imageId = imageIdInput.value.trim();
-
-    if (!imageId) {
-        showResult('Пожалуйста, введите ID изображения', 'error');
-        return;
     }
 
-    if (!confirm(`Вы уверены, что хотите удалить изображение с ID: ${imageId}?`)) {
-        return;
-    }
+    async function exportAnalyticsCSV() {
+        const from = document.getElementById('analytics-from').value;
+        const to = document.getElementById('analytics-to').value;
+        const params = new URLSearchParams();
+        if (from) params.append('from', from);
+        if (to) params.append('to', to);
 
-    // Show loading
-    loading.style.display = 'flex';
-
-    try {
-        const response = await fetch(`/image/${imageId}`, {
-            method: 'DELETE'
-        });
-
+        const response = await fetch(API_BASE + 'analytics/csv?' + params.toString());
         if (response.ok) {
-            showResult(`Изображение с ID ${imageId} успешно удалено!`, 'success');
-            // Clear the fetched image section
-            fetchedImageSection.style.display = 'none';
-            fetchedImageContainer.innerHTML = '';
+            const blob = await response.blob();
+            downloadBlob(blob, 'analytics.csv');
         } else {
-            const errorData = await response.json();
-            showResult(`Ошибка при удалении: ${errorData.error || 'Неизвестная ошибка'}`, 'error');
+            alert('Ошибка экспорта');
         }
-    } catch (error) {
-        showResult(`Ошибка сети: ${error.message}`, 'error');
-    } finally {
-        loading.style.display = 'none';
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 });
-
-// Show result message
-function showResult(message, type) {
-    resultContent.innerHTML = `<div class="${type}">${message}</div>`;
-    resultSection.style.display = 'block';
-
-    // Don't auto-hide success messages with ID
-    if (type === 'error') {
-        setTimeout(() => {
-            resultSection.style.display = 'none';
-        }, 5000);
-    }
-}
-
-// Initialize form state
-updateSubmitButton();

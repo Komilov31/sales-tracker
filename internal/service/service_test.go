@@ -82,7 +82,7 @@ func TestGetAggregated(t *testing.T) {
 	s := New(storage)
 	ctx := context.Background()
 	from, to := "2023-01-01", "2023-12-31"
-	expected := []model.Item{{ID: 1, Type: "доход", Amount: 100, Date: "2023-01-01", Category: "test", CreatedAt: time.Now(), Aggregated: model.Aggreagated{Sum: 100, Agvarage: 100.0, Count: 1, Median: 100.0, Percentile_90: 100.0}}}
+	expected := []model.Item{{ID: 1, Type: "доход", Amount: 100, Date: "2023-01-01", Category: "test", CreatedAt: time.Now(), Aggregated: model.Aggregated{Sum: 100, Average: 100.0, Count: 1, Median: 100.0, Percentile_90: 100.0}}}
 	storage.On("GetAggregated", ctx, from, to).Return(expected, nil)
 	result, err := s.GetAggregated(ctx, from, to)
 	assert.NoError(t, err)
@@ -118,7 +118,7 @@ func TestCSVAggregated(t *testing.T) {
 	s := New(storage)
 	ctx := context.Background()
 	from, to := "2023-01-01", "2023-12-31"
-	data := []model.Item{{ID: 1, Type: "доход", Amount: 100, Date: "2023-01-01", Category: "test", CreatedAt: time.Now(), Aggregated: model.Aggreagated{Sum: 100, Agvarage: 100.0, Count: 1, Median: 100.0, Percentile_90: 100.0}}}
+	data := []model.Item{{ID: 1, Type: "доход", Amount: 100, Date: "2023-01-01", Category: "test", CreatedAt: time.Now(), Aggregated: model.Aggregated{Sum: 100, Average: 100.0, Count: 1, Median: 100.0, Percentile_90: 100.0}}}
 	storage.On("GetAggregated", ctx, from, to).Return(data, nil)
 	fileName, err := s.CSVAggregated(ctx, from, to)
 	assert.NoError(t, err)

@@ -38,7 +38,7 @@ func (r *Repository) GetAggregated(ctx context.Context, from, to string) ([]mode
 			&item.Category,
 			&item.CreatedAt,
 			&item.Aggregated.Sum,
-			&item.Aggregated.Agvarage,
+			&item.Aggregated.Average,
 			&item.Aggregated.Count,
 			&item.Aggregated.Median,
 			&item.Aggregated.Percentile_90,

@@ -62,8 +62,8 @@ func Run() error {
 
 func registerRoutes(engine *ginext.Engine, handler *handler.Handler) {
 	// Register static files
-	// engine.LoadHTMLFiles("static/index.html")
-	// engine.Static("/static", "static")
+	engine.LoadHTMLFiles("static/index.html")
+	engine.Static("/static", "static")
 
 	// POST requests
 	engine.POST("/items", handler.CreateItem)
