@@ -1,4 +1,4 @@
-# Sales Tracker API
+# Sales Tracker
 
 ## Обзор
 
