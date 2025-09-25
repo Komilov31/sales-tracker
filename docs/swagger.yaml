@@ -1,0 +1,351 @@
+basePath: /
+definitions:
+  github_com_Komilov31_sales-tracker_internal_dto.CreateItem:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      category:
+        type: string
+      date:
+        type: string
+      type:
+        enum:
+        - доход
+        - расход
+        type: string
+    required:
+    - amount
+    - category
+    - date
+    - type
+    type: object
+  github_com_Komilov31_sales-tracker_internal_dto.ItemWithoutAggregated:
+    properties:
+      amount:
+        type: integer
+      category:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        type: integer
+      type:
+        type: string
+    type: object
+  github_com_Komilov31_sales-tracker_internal_dto.UpdateItem:
+    properties:
+      amount:
+        type: integer
+      category:
+        type: string
+      date:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_Komilov31_sales-tracker_internal_model.Aggreagated:
+    properties:
+      avarage:
+        type: number
+      count:
+        type: integer
+      median:
+        type: number
+      percentile:
+        type: number
+      sum:
+        type: integer
+    type: object
+  github_com_Komilov31_sales-tracker_internal_model.Item:
+    properties:
+      aggregated_data:
+        $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_model.Aggreagated'
+      amount:
+        type: integer
+      category:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      id:
+        type: integer
+      type:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for tracking sales, income, and expenses with analytics and CSV
+    exports
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Sales Tracker API
+  version: "1.0"
+paths:
+  /:
+    get:
+      consumes:
+      - application/json
+      description: Get the main HTML page of the application
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page content
+          schema:
+            type: string
+      summary: Get main page
+      tags:
+      - pages
+  /analytics:
+    get:
+      description: Retrieve aggregated statistics for items within a date range
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Aggregated items
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_model.Item'
+            type: array
+        "400":
+          description: Invalid date parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get aggregated analytics
+      tags:
+      - analytics
+  /analytics/csv:
+    get:
+      description: Download CSV file with aggregated statistics for a date range
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid date parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Export aggregated analytics as CSV
+      tags:
+      - analytics
+  /items:
+    get:
+      description: Retrieve a list of all items, optionally sorted by specified fields
+      parameters:
+      - collectionFormat: csv
+        description: Sort fields (e.g., date,amount)
+        in: query
+        items:
+          type: string
+        name: sort_by
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of items
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_dto.ItemWithoutAggregated'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all items
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Creates a new expense or income entry in the sales tracker
+      parameters:
+      - description: Item to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_dto.CreateItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Created item
+          schema:
+            $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_dto.ItemWithoutAggregated'
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new item
+      tags:
+      - items
+  /items/{id}:
+    delete:
+      description: Remove an item by its ID
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Item not found or invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete an item
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      description: Partially update an existing item by ID
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Komilov31_sales-tracker_internal_dto.UpdateItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID or payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update an item
+      tags:
+      - items
+  /items/csv:
+    get:
+      description: Download CSV file with filtered and sorted items
+      parameters:
+      - collectionFormat: csv
+        description: Sort fields (e.g., date,amount)
+        in: query
+        items:
+          type: string
+        name: sort_by
+        type: array
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Export filtered items as CSV
+      tags:
+      - items
+swagger: "2.0"
