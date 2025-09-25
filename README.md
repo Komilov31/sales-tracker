@@ -46,7 +46,7 @@ Sales Tracker - это веб-приложение для отслеживани
 ### С использованием Docker (Рекомендуется)
 1. Клонируйте репозиторий:
    ```
-   git clone <repo-url>
+   git clone https://github.com/Komilov31/sales-tracker.git
    cd sales-tracker
    ```
 
