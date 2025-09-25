@@ -31,7 +31,7 @@ Sales Tracker - это веб-приложение для отслеживани
 `internal/model/` - Структуры вроде `Item` (ID, Type, Amount, Date, Category, CreatedAt, Aggregated) и `Aggregated` (Sum, Average, Count, Median, Percentile_90). 
 `internal/dto/` для DTO запросов/ответов (например, CreateItem, UpdateItem).
 
-5. **Конфигурация**: `internal/config/` - Загружает из `config/config.yaml` или переменных окружения. Типы для конфига Postgres и HTTP-сервера.
+5. **Конфигурация**: `internal/config/` - Загружает из `config/config.yaml` и переменных окружения. Типы для конфига Postgres и HTTP-сервера.
 
 6. **Валидация**: `internal/validator/` - Пользовательские валидаторы для вводов.
 
